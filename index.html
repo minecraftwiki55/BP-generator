@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>صناعة ملف مود Minecraft</title>
+    <style>
+        body {
+            background-color: #1f1f1f;
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            text-align: center;
+        }
+
+        .container {
+            margin-top: 50px;
+            background-color: #2a2a2a;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.7);
+            display: inline-block;
+            width: 80%;
+        }
+
+        h1 {
+            color: #e0c085;
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        input, textarea, button {
+            width: 80%;
+            margin: 10px;
+            padding: 15px;
+            border-radius: 5px;
+            border: none;
+            font-size: 16px;
+            color: #333;
+        }
+
+        input, textarea {
+            background-color: #fff;
+        }
+
+        button {
+            background-color: #e0c085;
+            color: #fff;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #d4b075;
+        }
+
+        input[type="file"] {
+            color: #fff;
+            background-color: #444;
+        }
+
+        p#status {
+            margin-top: 20px;
+            font-size: 18px;
+            color: #e0c085;
+        }
+
+        @media screen and (max-width: 600px) {
+            .container {
+                width: 100%;
+            }
+
+            input, textarea, button {
+                width: 90%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>صناعة ملف مود Minecraft</h1>
+
+        <form id="modForm">
+            <input type="text" id="modName" placeholder="أدخل اسم المود" required><br>
+            <textarea id="modDescription" rows="4" placeholder="أدخل وصف المود" required></textarea><br>
+            <input type="file" id="modIcon" accept=".png" required><br>
+            <button type="submit">Submit</button>
+        </form>
+
+        <p id="status"></p>
+    </div>
+
+    <!-- تضمين مكتبة JSZip -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.6.0/jszip.min.js"></script>
+
+    <script>
+        document.getElementById("modForm").addEventListener("submit", function(e) {
+            e.preventDefault();
+
+            // جلب اسم المود والوصف
+            const modName = document.getElementById("modName").value;
+            const modDescription = document.getElementById("modDescription").value;
+
+            // توليد UUID باستخدام crypto.randomUUID
+            const uuid = crypto.randomUUID();
+            const dataModuleUuid = crypto.randomUUID();
+            const scriptModuleUuid = crypto.randomUUID();
+
+            // تعديل محتوى manifest.json بناءً على القيم التي طلبتها
+            const manifest = {
+                "format_version": 2,
+                "header": {
+                    "name": modName,
+                    "description": modDescription,
+                    "min_engine_version": [1, 20, 30],
+                    "uuid": uuid,
+                    "version": [1, 0, 0]
+                },
+                "modules": [
+                    {
+                        "type": "data",
+                        "uuid": dataModuleUuid,
+                        "version": [1, 0, 0]
+                    },
+                    {
+                        "type": "script",
+                        "language": "javascript",
+                        "uuid": scriptModuleUuid,
+                        "entry": "scripts/RedaFile.js",
+                        "version": [1, 0, 0]
+                    }
+                ],
+                "dependencies": [
+                    {
+                        "uuid": "55e5c9cb-488c-4b9c-abdf-7e3531b6288d",
+                        "version": [1, 0, 0]
+                    },
+                    {
+                        "module_name": "@minecraft/server",
+                        "version": "1.15.0-beta"
+                    }
+                ]
+            };
+
+            // تحميل ملف الصورة (PNG)
+            const modIconFile = document.getElementById("modIcon").files[0];
+            if (!modIconFile || !modIconFile.name.endsWith('.png')) {
+                alert("يرجى تحميل صورة بصيغة PNG!");
+                return;
+            }
+
+            // عرض الحالة
+            document.getElementById("status").innerText = "تم إنشاء المود بنجاح! جاري التحميل...";
+
+            // إنشاء ملف الـ ZIP
+            createZipFile(modName, manifest, modIconFile);
+        });
+
+        // دالة إنشاء ملف ZIP
+        function createZipFile(modName, manifest, modIconFile) {
+            const zip = new JSZip();
+
+            // إضافة ملف manifest.json
+            zip.file("manifest.json", JSON.stringify(manifest, null, 4));
+
+            // إضافة ملف RedaFile.js في مجلد scripts
+            const scriptFolder = zip.folder("scripts");
+            scriptFolder.file("RedaFile.js", "// هنا الكود الخاص بك");
+
+            // إضافة صورة pack_icon.png
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                zip.file("pack_icon.png", e.target.result.split(',')[1], { base64: true });
+
+                // تنزيل ملف ZIP
+                zip.generateAsync({ type: "blob" }).then(function(content) {
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(content);
+                    link.download = `${modName}_mod.zip`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+
+                    document.getElementById("status").innerText = "تم تنزيل المود بنجاح!";
+                });
+            };
+            reader.readAsDataURL(modIconFile);
+        }
+    </script>
+
+</body>
+</html>
